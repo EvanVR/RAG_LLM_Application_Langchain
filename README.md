@@ -22,7 +22,7 @@ IntelliBlend is a Streamlit-based application that allows users to chat with the
 - **Chroma**: A Python package for vector stores and embeddings.
 
 ## How to Run
-1. Clone the repository: `git clone https://github.com/your/repository.git`
+1. Clone the repository: `git clone https://github.com/EvanVR/RAG_LLM_Application_Langchain`
 2. Install dependencies: `pip install -r requirements.txt`
 3. Run the Streamlit application: `streamlit run app.py`
 
