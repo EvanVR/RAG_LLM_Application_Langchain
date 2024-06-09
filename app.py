@@ -17,12 +17,11 @@ from langchain.llms import OpenAI
 from langchain.callbacks import get_openai_callback
 from nltk.translate.bleu_score import sentence_bleu
 import random
-
-
 import streamlit as st
 import os
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
+from textblob import TextBlob
 
 load_dotenv()
 
@@ -45,7 +44,7 @@ def get_vectorstore_from_pdf(pdf):
     for page in pdf_reader.pages:
         text += page.extract_text()  
 
-    #text splitter
+    # Text splitter
     text_splitter = CharacterTextSplitter(
         separator="\n",
         chunk_size=1000,
@@ -118,38 +117,69 @@ def calculate_bleu(reference, candidate):
     bleu_score = bias
     return bleu_score
 
+# Function to get sentiment of a text
+def get_sentiment(text):
+    blob = TextBlob(text)
+    sentiment = blob.sentiment.polarity
+    return sentiment
+
 # Function to get a response for a user query
 def get_response(user_input):
-    retriever_chain = get_context_retriever_chain(st.session_state.vector_store)  # Retriever chain
-    conversation_rag_chain = get_conversational_rag_chain(retriever_chain)  # Conversational RAG chain
+    with get_openai_callback() as callback:
+        retriever_chain = get_context_retriever_chain(st.session_state.vector_store)  # Retriever chain
+        conversation_rag_chain = get_conversational_rag_chain(retriever_chain)  # Conversational RAG chain
+        
+        response = conversation_rag_chain.invoke({
+            "chat_history": st.session_state.chat_history,
+            "input": user_input
+        })  # Response from RAG
+        
+        # Calculate similarity between user input and response
+        similarity_score = calculate_similarity(user_input, response['answer'])
+        
+        # Calculate BLEU score between user input and response
+        bleu_score = calculate_bleu(user_input, response['answer'])
+        if bleu_score <= 0:
+            bleu_score += bias
+        else:
+            bleu_score -= bias
+        
+        # Get sentiment of the response
+        sentiment = get_sentiment(response['answer'])
+        
+        # Get token usage
+        token_usage = callback.total_tokens
     
-    response = conversation_rag_chain.invoke({
-        "chat_history": st.session_state.chat_history,
-        "input": user_input
-    })  #Response from RAG
-    
-    # Calculate similarity between user input and response
-    similarity_score = calculate_similarity(user_input, response['answer'])
-    
-    # Calculate BLEU score between user input and response
-    bleu_score = calculate_bleu(user_input, response['answer'])
-    if bleu_score <= 0:
-        bleu_score += bias
-    else:
-        bleu_score -= bias
-    
-    return response['answer'], similarity_score, bleu_score
+    return response['answer'], similarity_score, bleu_score, sentiment, token_usage
 
 st.set_page_config(page_title="Chat with Websites, PDFs, and Videos")
 bias = random.uniform(0, 0.5)
 st.title("IntelliBlend: \n Chat and Seamlessly Integrate Knowledge from Websites, PDFs, and Videos for Smarter Conversations")
-
 
 with st.sidebar:
     st.sidebar.title("Evan Velagaleti \n ev379@drexel.edu")
     website_url = st.text_input("Website URL")
     pdf = st.file_uploader("Upload your PDF", type="pdf")
     video_url = st.text_input("YouTube Video URL")
+
+def display_chat_and_metrics():
+    # Display chat history and metrics
+    for index, message in enumerate(st.session_state.chat_history):
+        if index != 0:  # Skip the first message (bot introduction)
+            if isinstance(message, AIMessage):
+                with st.chat_message("AI"):
+                    st.write(message.content)
+            elif isinstance(message, HumanMessage):
+                with st.chat_message("Human"):
+                    st.write(message.content)
+
+    if "metrics" in st.session_state:
+        with st.chat_message("Metrics"):
+            metrics = st.session_state.metrics
+            st.write(f"Similarity Score: {metrics['similarity_score']}")
+            st.write(f"BLEU Score: {metrics['bleu_score']}")
+            st.write(f"Sentiment: {metrics['sentiment']}")
+            st.write(f"Tokens Used: {metrics['token_usage']}")
 
 if website_url:
     if "chat_history" not in st.session_state:
@@ -159,22 +189,26 @@ if website_url:
     if "vector_store" not in st.session_state:
         st.session_state.vector_store = get_vectorstore_from_url(website_url)  # Create vector store from the URL
 
-    user_query = st.chat_input("Type your message here...")
-    if user_query:
-        response, similarity_score, bleu_score = get_response(user_query)  
-        st.session_state.chat_history.append(HumanMessage(content=user_query))  # Add user query to chat history
-        st.session_state.chat_history.append(AIMessage(content=response + f"\nSimilarity Score: {similarity_score} | BLEU Score: {bleu_score}"))
-        # st.session_state.chat_history.append(AIMessage(f"Similarity Score: {1-similarity_score}"))  
-        # st.write(f"Similarity Score: {1-similarity_score}")
-
-    # Display chat history and similarity score
+    # Display initial bot message
     for message in st.session_state.chat_history:
         if isinstance(message, AIMessage):
             with st.chat_message("AI"):
                 st.write(message.content)
-        elif isinstance(message, HumanMessage):
-            with st.chat_message("Human"):
-                st.write(message.content)
+
+    user_query = st.chat_input("Type your message here...")
+    if user_query:
+        response, similarity_score, bleu_score, sentiment, token_usage = get_response(user_query)  
+        st.session_state.chat_history.append(HumanMessage(content=user_query))  # Add user query to chat history
+        st.session_state.chat_history.append(AIMessage(content=response))
+
+        # Store metrics in session state
+        st.session_state.metrics = {
+            "similarity_score": similarity_score,
+            "bleu_score": bleu_score,
+            "sentiment": sentiment,
+            "token_usage": token_usage
+        }
+        display_chat_and_metrics()
 
 elif pdf:
     if "chat_history" not in st.session_state:
@@ -184,22 +218,26 @@ elif pdf:
     if "vector_store" not in st.session_state:
         st.session_state.vector_store = get_vectorstore_from_pdf(pdf)  # Create vector store from the PDF
 
-    user_query = st.chat_input("Type your message here...")
-    if user_query:
-        response, similarity_score, bleu_score = get_response(user_query)  # Get response for the user query
-        st.session_state.chat_history.append(HumanMessage(content=user_query))  
-        st.session_state.chat_history.append(AIMessage(content=response + f"\nSimilarity Score: {similarity_score} | BLEU Score: {bleu_score}"))
-  
-        # st.session_state.chat_history.append(AIMessage(f"Similarity Score: {1-similarity_score}"))  
-
-    # Display chat history and similarity score
+    # Display initial bot message
     for message in st.session_state.chat_history:
         if isinstance(message, AIMessage):
             with st.chat_message("AI"):
                 st.write(message.content)
-        elif isinstance(message, HumanMessage):
-            with st.chat_message("Human"):
-                st.write(message.content)
+
+    user_query = st.chat_input("Type your message here...")
+    if user_query:
+        response, similarity_score, bleu_score, sentiment, token_usage = get_response(user_query)  # Get response for the user query
+        st.session_state.chat_history.append(HumanMessage(content=user_query))  
+        st.session_state.chat_history.append(AIMessage(content=response))
+
+        # Store metrics in session state
+        st.session_state.metrics = {
+            "similarity_score": similarity_score,
+            "bleu_score": bleu_score,
+            "sentiment": sentiment,
+            "token_usage": token_usage
+        }
+        display_chat_and_metrics()
 
 elif video_url:
     if "chat_history" not in st.session_state:
@@ -207,24 +245,31 @@ elif video_url:
             AIMessage(content="Hello, I am a bot. How can I help you?"),
         ]
     if "vector_store" not in st.session_state:
-        st.session_state.vector_store = get_vectorstore_from_youtube(video_url)  # Create vector store from the YouTube URL
+        st.session_state.vector_store = get_vectorstore_from_youtube(video_url)  # Create vector store from the YouTube video URL
 
-    user_query = st.chat_input("Type your message here...")
-    if user_query:
-        response, similarity_score, bleu_score = get_response(user_query) 
-        st.session_state.chat_history.append(HumanMessage(content=user_query))  
-        st.session_state.chat_history.append(AIMessage(content=response + f"\nSimilarity Score: {similarity_score} | BLEU Score: {bleu_score}"))
-  
-        # st.session_state.chat_history.append(AIMessage(f"Similarity Score: {1-similarity_score}"))  
-
-    # Display chat history and similarity score
+    # Display initial bot message
     for message in st.session_state.chat_history:
         if isinstance(message, AIMessage):
             with st.chat_message("AI"):
                 st.write(message.content)
-        elif isinstance(message, HumanMessage):
-            with st.chat_message("Human"):
-                st.write(message.content)
+
+    user_query = st.chat_input("Type your message here...")
+    if user_query:
+        response, similarity_score, bleu_score, sentiment, token_usage = get_response(user_query)  # Get response for the user query
+        st.session_state.chat_history.append(HumanMessage(content=user_query))  
+        st.session_state.chat_history.append(AIMessage(content=response))
+
+        # Store metrics in session state
+        st.session_state.metrics = {
+            "similarity_score": similarity_score,
+            "bleu_score": bleu_score,
+            "sentiment": sentiment,
+            "token_usage": token_usage
+        }
+        display_chat_and_metrics()
 
 else:
     st.info("Please enter a website URL, upload a PDF, or enter a YouTube video URL.")
+
+
+
