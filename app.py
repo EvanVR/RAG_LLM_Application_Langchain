@@ -33,7 +33,7 @@ def get_vectorstore_from_url(url):
     text_splitter = RecursiveCharacterTextSplitter()  
     document_chunks = text_splitter.split_documents(document)  # Split the document into chunks
     
-    vector_store = Chroma.from_documents(document_chunks, OpenAIEmbeddings())  # Create a Chroma vector store using OpenAI embeddings
+    vector_store = Chroma.from_documents(document_chunks, OpenAIEmbeddings())  # Chroma vector store using OpenAI embeddings
     
     return vector_store
 
@@ -54,7 +54,7 @@ def get_vectorstore_from_pdf(pdf):
     chunks = text_splitter.split_text(text)  # Split the text into chunks
     
     embeddings = OpenAIEmbeddings()  # Initialize OpenAI embeddings
-    knowledge_base = FAISS.from_texts(chunks, embeddings)  # Create a FAISS vector store from the chunks
+    knowledge_base = FAISS.from_texts(chunks, embeddings)  # FAISS vector store from the chunks
     
     return knowledge_base
 
@@ -67,7 +67,7 @@ def get_vectorstore_from_youtube(url):
     split_docs = text_splitter.split_documents(docs)  # Split the document into chunks
     
     embeddings = OpenAIEmbeddings()  
-    vector_store = Chroma.from_documents(split_docs, embeddings)  # Create a Chroma vector store from the chunks
+    vector_store = Chroma.from_documents(split_docs, embeddings)  # Chroma vector store from the chunks
     
     return vector_store
 
@@ -75,7 +75,7 @@ def get_vectorstore_from_youtube(url):
 def get_context_retriever_chain(vector_store):
     llm = ChatOpenAI()  # Initialize the language model
     
-    retriever = vector_store.as_retriever()  # Create a retriever from the vector store
+    retriever = vector_store.as_retriever()  # Retriever from the vector store
     
     prompt = ChatPromptTemplate.from_messages([
         MessagesPlaceholder(variable_name="chat_history"),
@@ -187,9 +187,8 @@ if website_url:
             AIMessage(content="Hello, I am a bot. How can I help you?"),
         ]
     if "vector_store" not in st.session_state:
-        st.session_state.vector_store = get_vectorstore_from_url(website_url)  # Create vector store from the URL
+        st.session_state.vector_store = get_vectorstore_from_url(website_url)  # Vector store from the URL
 
-    # Display initial bot message
     for message in st.session_state.chat_history:
         if isinstance(message, AIMessage):
             with st.chat_message("AI"):
@@ -216,9 +215,8 @@ elif pdf:
             AIMessage(content="Hello, I am a bot. How can I help you?"),
         ]
     if "vector_store" not in st.session_state:
-        st.session_state.vector_store = get_vectorstore_from_pdf(pdf)  # Create vector store from the PDF
+        st.session_state.vector_store = get_vectorstore_from_pdf(pdf)  # Vector store from the PDF
 
-    # Display initial bot message
     for message in st.session_state.chat_history:
         if isinstance(message, AIMessage):
             with st.chat_message("AI"):
@@ -226,7 +224,7 @@ elif pdf:
 
     user_query = st.chat_input("Type your message here...")
     if user_query:
-        response, similarity_score, bleu_score, sentiment, token_usage = get_response(user_query)  # Get response for the user query
+        response, similarity_score, bleu_score, sentiment, token_usage = get_response(user_query)  # Response for the user query
         st.session_state.chat_history.append(HumanMessage(content=user_query))  
         st.session_state.chat_history.append(AIMessage(content=response))
 
@@ -245,9 +243,8 @@ elif video_url:
             AIMessage(content="Hello, I am a bot. How can I help you?"),
         ]
     if "vector_store" not in st.session_state:
-        st.session_state.vector_store = get_vectorstore_from_youtube(video_url)  # Create vector store from the YouTube video URL
+        st.session_state.vector_store = get_vectorstore_from_youtube(video_url)  # Vector store from the YouTube video URL
 
-    # Display initial bot message
     for message in st.session_state.chat_history:
         if isinstance(message, AIMessage):
             with st.chat_message("AI"):
@@ -255,7 +252,7 @@ elif video_url:
 
     user_query = st.chat_input("Type your message here...")
     if user_query:
-        response, similarity_score, bleu_score, sentiment, token_usage = get_response(user_query)  # Get response for the user query
+        response, similarity_score, bleu_score, sentiment, token_usage = get_response(user_query)  # Response for the user query
         st.session_state.chat_history.append(HumanMessage(content=user_query))  
         st.session_state.chat_history.append(AIMessage(content=response))
 
