@@ -15,15 +15,8 @@ IntelliBlend is an interactive application built using Streamlit that leverages 
 
 ## Technologies Used
 
-- **LangChain:** LangChain is a Python package used for various language processing tasks, including generating responses and retrieving information.
-- **Streamlit:** Streamlit is a web application framework used for building interactive web applications, providing a user-friendly interface for IntelliBlend.
-- **PyPDF2:** PyPDF2 is a Python library used for reading PDF files, enabling the application to extract information from PDF documents.
-- **NLTK:** NLTK is a Python library used for natural language processing tasks such as tokenization, stemming, and parsing, enhancing the language processing capabilities of IntelliBlend.
-- **TextBlob:** TextBlob is a Python library used for processing textual data, including sentiment analysis, which helps IntelliBlend analyze the sentiment of its responses.
-- **scikit-learn:** scikit-learn is a Python library used for various machine learning tasks, including calculating similarity scores between texts, which is essential for evaluating response relevance in IntelliBlend.
-- **FAISS:** FAISS is a library used for efficient similarity search and clustering of dense vectors, enhancing the speed and accuracy of similarity calculations in IntelliBlend.
-- **OpenAI:** OpenAI is a platform used for building and deploying AI models, which is leveraged by IntelliBlend for language modeling and response generation.
-- **Chroma:** Chroma is a Python package used for managing vector stores and embeddings, which are essential for storing and processing textual data in IntelliBlend.
+- **LangChain:** for language processing tasks, generating responses, **Streamlit:** web application framework, **PyPDF2:** for reading PDF files, **NLTK:** for natural language processing tasks such as tokenization, stemming, and parsing,
+- **TextBlob:**, **scikit-learn:** calculating similarity scores between texts, **FAISS:** clustering of dense vectors, **OpenAI:**  for language modeling and response generation, **Chroma:** for managing vector stores and embeddings, which are essential for storing and processing textual data.
 
 ## How to Run
 
@@ -31,7 +24,8 @@ To run IntelliBlend, follow these steps:
 
 1. Clone the repository: `git clone https://github.com/EvanVR/RAG_LLM_Application_Langchain`
 2. Install dependencies: `pip install -r requirements.txt`
-3. Run the Streamlit application: `streamlit run app.py`
+3. Set OPENAI_API_KEY in the .env file or as a variable. Find your key: https://platform.openai.com/
+4. Run the Streamlit application: `streamlit run app.py`
 
 ## Usage
 
